@@ -41,9 +41,9 @@ function handleHeartRate(event) {
 
   let zone = "";
 
-  if (bpm < 110) {
+  if (bpm < 105) {
     zone = "chill";
-  } else if (bpm < 140) {
+  } else if (bpm < 130) {
     zone = "normal";
   } else {
     zone = "endurance";

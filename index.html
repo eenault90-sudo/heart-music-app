@@ -1,18 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Heart Music MVP</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Heart Music Pro</title>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<h1>Heart Music</h1>
+<h1>Heart Music Pro</h1>
 
 <button id="connect">Connect Polar H10</button>
 
-<p>BPM : <span id="bpm">--</span></p>
-<p>Zone : <span id="zone">--</span></p>
+<h2>BPM : <span id="bpm">--</span></h2>
+
+<h2>Zone : <span id="zone">--</span></h2>
+
+<h3>Morceau en cours :</h3>
+<p id="currentTrack">Aucun</p>
+
+<hr>
+
+<h3>Ajouter des musiques</h3>
+
+<p>Playlist Chill</p>
+<input type="file" id="addChill" multiple accept=".mp3">
+
+<p>Playlist Normal</p>
+<input type="file" id="addNormal" multiple accept=".mp3">
+
+<p>Playlist Endurance</p>
+<input type="file" id="addEndurance" multiple accept=".mp3">
+
+<hr>
+
+<p>Chill : <span id="chillCount">0</span> morceau(x)</p>
+<p>Normal : <span id="normalCount">0</span> morceau(x)</p>
+<p>Endurance : <span id="enduranceCount">0</span> morceau(x)</p>
 
 <audio id="audio" controls></audio>
 

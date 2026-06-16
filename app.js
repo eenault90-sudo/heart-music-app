@@ -1,26 +1,130 @@
 let currentZone = "";
+let pendingZone = "";
+let zoneTimer = null;
 
 const bpmDisplay = document.getElementById("bpm");
 const zoneDisplay = document.getElementById("zone");
 const audio = document.getElementById("audio");
+const currentTrack = document.getElementById("currentTrack");
 
-const tracks = {
-  chill: "chill.mp3",
-  normal: "normal.mp3",
-  endurance: "endurance.mp3"
+const playlists = {
+  chill: [],
+  normal: [],
+  endurance: []
 };
 
-document.getElementById("connect").addEventListener("click", async () => {
+function savePlaylists() {
 
-  const device = await navigator.bluetooth.requestDevice({
-    filters: [{ services: ["heart_rate"] }]
-  });
+  localStorage.setItem(
+    "heartMusicPlaylists",
+    JSON.stringify(playlists)
+  );
 
-  const server = await device.gatt.connect();
+}
 
-  const service = await server.getPrimaryService("heart_rate");
+function updateCounters() {
 
-  const characteristic = await service.getCharacteristic("heart_rate_measurement");
+  document.getElementById("chillCount").textContent =
+    playlists.chill.length;
+
+  document.getElementById("normalCount").textContent =
+    playlists.normal.length;
+
+  document.getElementById("enduranceCount").textContent =
+    playlists.endurance.length;
+
+}
+
+function loadPlaylists() {
+
+  const saved =
+    localStorage.getItem("heartMusicPlaylists");
+
+  if (!saved) return;
+
+  const data = JSON.parse(saved);
+
+  playlists.chill = data.chill || [];
+  playlists.normal = data.normal || [];
+  playlists.endurance = data.endurance || [];
+
+  updateCounters();
+
+}
+
+loadPlaylists();
+
+function addFilesToPlaylist(files, zone) {
+
+  for (const file of files) {
+
+    playlists[zone].push({
+      name: file.name,
+      url: URL.createObjectURL(file)
+    });
+
+  }
+
+  savePlaylists();
+
+  updateCounters();
+
+}
+
+document.getElementById("addChill")
+.addEventListener("change", e => {
+
+  addFilesToPlaylist(
+    e.target.files,
+    "chill"
+  );
+
+});
+
+document.getElementById("addNormal")
+.addEventListener("change", e => {
+
+  addFilesToPlaylist(
+    e.target.files,
+    "normal"
+  );
+
+});
+
+document.getElementById("addEndurance")
+.addEventListener("change", e => {
+
+  addFilesToPlaylist(
+    e.target.files,
+    "endurance"
+  );
+
+});
+
+document.getElementById("connect")
+.addEventListener("click", async () => {
+
+  const device =
+    await navigator.bluetooth.requestDevice({
+      filters: [
+        {
+          services: ["heart_rate"]
+        }
+      ]
+    });
+
+  const server =
+    await device.gatt.connect();
+
+  const service =
+    await server.getPrimaryService(
+      "heart_rate"
+    );
+
+  const characteristic =
+    await service.getCharacteristic(
+      "heart_rate_measurement"
+    );
 
   await characteristic.startNotifications();
 
@@ -31,6 +135,35 @@ document.getElementById("connect").addEventListener("click", async () => {
 
 });
 
+function randomTrack(zone) {
+
+  const list = playlists[zone];
+
+  if (list.length === 0) return null;
+
+  return list[
+    Math.floor(
+      Math.random() * list.length
+    )
+  ];
+
+}
+
+function playZone(zone) {
+
+  const track = randomTrack(zone);
+
+  if (!track) return;
+
+  audio.src = track.url;
+
+  currentTrack.textContent =
+    track.name;
+
+  audio.play();
+
+}
+
 function handleHeartRate(event) {
 
   const value = event.target.value;
@@ -39,23 +172,53 @@ function handleHeartRate(event) {
 
   bpmDisplay.textContent = bpm;
 
-  let zone = "";
+  let targetZone;
 
   if (bpm < 105) {
-    zone = "chill";
+
+    targetZone = "chill";
+
   } else if (bpm < 130) {
-    zone = "normal";
+
+    targetZone = "normal";
+
   } else {
-    zone = "endurance";
+
+    targetZone = "endurance";
+
   }
 
-  zoneDisplay.textContent = zone;
+  zoneDisplay.textContent =
+    targetZone;
 
-  if (zone !== currentZone) {
-    currentZone = zone;
+  if (
+    targetZone === currentZone
+  ) {
 
-    audio.src = tracks[zone];
+    pendingZone = "";
+    clearTimeout(zoneTimer);
 
-    audio.play();
+    return;
+
   }
-}
+
+  if (
+    targetZone !== pendingZone
+  ) {
+
+    pendingZone = targetZone;
+
+    clearTimeout(zoneTimer);
+
+    zoneTimer = setTimeout(() => {
+
+      currentZone =
+        pendingZone;
+
+      playZone(currentZone);
+
+    }, 20000);
+
+  }
+
+    }

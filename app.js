@@ -1,224 +1,309 @@
-let currentZone = "";
-let pendingZone = "";
-let zoneTimer = null;
-
 const bpmDisplay = document.getElementById("bpm");
 const zoneDisplay = document.getElementById("zone");
+const currentTrackDisplay = document.getElementById("currentTrack");
 const audio = document.getElementById("audio");
-const currentTrack = document.getElementById("currentTrack");
 
-const playlists = {
-  chill: [],
-  normal: [],
-  endurance: []
+let playlists = {};
+let currentZone = null;
+let pendingZone = null;
+let zoneTimer = null;
+
+const CONFIRMATION_DELAY = 10000;
+const FADE_DURATION = 2000;
+
+const lastTrackPlayed = {
+    chill: null,
+    normal: null,
+    endurance: null
 };
 
-function savePlaylists() {
+async function loadPlaylists() {
 
-  localStorage.setItem(
-    "heartMusicPlaylists",
-    JSON.stringify(playlists)
-  );
+    const response = await fetch("playlist.json");
 
-}
-
-function updateCounters() {
-
-  document.getElementById("chillCount").textContent =
-    playlists.chill.length;
-
-  document.getElementById("normalCount").textContent =
-    playlists.normal.length;
-
-  document.getElementById("enduranceCount").textContent =
-    playlists.endurance.length;
-
-}
-
-function loadPlaylists() {
-
-  const saved =
-    localStorage.getItem("heartMusicPlaylists");
-
-  if (!saved) return;
-
-  const data = JSON.parse(saved);
-
-  playlists.chill = data.chill || [];
-  playlists.normal = data.normal || [];
-  playlists.endurance = data.endurance || [];
-
-  updateCounters();
+    playlists = await response.json();
 
 }
 
 loadPlaylists();
 
-function addFilesToPlaylist(files, zone) {
+function randomTrack(zone) {
 
-  for (const file of files) {
+    const list = playlists[zone];
 
-    playlists[zone].push({
-      name: file.name,
-      url: URL.createObjectURL(file)
-    });
+    if (!list || list.length === 0) return null;
 
-  }
+    if (list.length === 1)
+        return list[0];
 
-  savePlaylists();
+    let track;
 
-  updateCounters();
+    do {
+
+        track = list[
+            Math.floor(Math.random() * list.length)
+        ];
+
+    } while (
+        track === lastTrackPlayed[zone]
+    );
+
+    lastTrackPlayed[zone] = track;
+
+    return track;
 
 }
 
-document.getElementById("addChill")
-.addEventListener("change", e => {
+async function fadeToTrack(trackPath) {
 
-  addFilesToPlaylist(
-    e.target.files,
-    "chill"
-  );
+    if (!trackPath) return;
 
-});
+    const filename =
+        trackPath.split("/").pop();
 
-document.getElementById("addNormal")
-.addEventListener("change", e => {
+    currentTrackDisplay.textContent =
+        filename;
 
-  addFilesToPlaylist(
-    e.target.files,
-    "normal"
-  );
+    if (!audio.src) {
 
-});
+        audio.src = trackPath;
+        audio.volume = 1;
 
-document.getElementById("addEndurance")
-.addEventListener("change", e => {
+        try {
+            await audio.play();
+        } catch(e){}
 
-  addFilesToPlaylist(
-    e.target.files,
-    "endurance"
-  );
+        return;
 
-});
+    }
 
-document.getElementById("connect")
-.addEventListener("click", async () => {
+    const fadeStep = 0.05;
+    const interval =
+        FADE_DURATION / 20;
 
-  const device =
-    await navigator.bluetooth.requestDevice({
-      filters: [
-        {
-          services: ["heart_rate"]
+    const fadeOut = setInterval(() => {
+
+        if (audio.volume > fadeStep) {
+
+            audio.volume -= fadeStep;
+
+        } else {
+
+            clearInterval(fadeOut);
+
+            audio.pause();
+
+            audio.src = trackPath;
+
+            audio.volume = 0;
+
+            audio.play();
+
+            const fadeIn =
+                setInterval(() => {
+
+                    if (
+                        audio.volume < 1 - fadeStep
+                    ) {
+
+                        audio.volume += fadeStep;
+
+                    } else {
+
+                        audio.volume = 1;
+
+                        clearInterval(fadeIn);
+
+                    }
+
+                }, interval);
+
         }
-      ]
-    });
 
-  const server =
-    await device.gatt.connect();
-
-  const service =
-    await server.getPrimaryService(
-      "heart_rate"
-    );
-
-  const characteristic =
-    await service.getCharacteristic(
-      "heart_rate_measurement"
-    );
-
-  await characteristic.startNotifications();
-
-  characteristic.addEventListener(
-    "characteristicvaluechanged",
-    handleHeartRate
-  );
-
-});
-
-function randomTrack(zone) {
-
-  const list = playlists[zone];
-
-  if (list.length === 0) return null;
-
-  return list[
-    Math.floor(
-      Math.random() * list.length
-    )
-  ];
+    }, interval);
 
 }
 
 function playZone(zone) {
 
-  const track = randomTrack(zone);
+    const track =
+        randomTrack(zone);
 
-  if (!track) return;
+    if (!track) return;
 
-  audio.src = track.url;
-
-  currentTrack.textContent =
-    track.name;
-
-  audio.play();
+    fadeToTrack(track);
 
 }
 
-function handleHeartRate(event) {
+function requestZoneChange(zone) {
 
-  const value = event.target.value;
+    if (zone === currentZone)
+        return;
 
-  const bpm = value.getUint8(1);
+    if (zone === pendingZone)
+        return;
 
-  bpmDisplay.textContent = bpm;
-
-  let targetZone;
-
-  if (bpm < 105) {
-
-    targetZone = "chill";
-
-  } else if (bpm < 130) {
-
-    targetZone = "normal";
-
-  } else {
-
-    targetZone = "endurance";
-
-  }
-
-  zoneDisplay.textContent =
-    targetZone;
-
-  if (
-    targetZone === currentZone
-  ) {
-
-    pendingZone = "";
-    clearTimeout(zoneTimer);
-
-    return;
-
-  }
-
-  if (
-    targetZone !== pendingZone
-  ) {
-
-    pendingZone = targetZone;
+    pendingZone = zone;
 
     clearTimeout(zoneTimer);
 
     zoneTimer = setTimeout(() => {
 
-      currentZone =
-        pendingZone;
+        currentZone = pendingZone;
 
-      playZone(currentZone);
+        playZone(currentZone);
 
-    }, 20000);
+    }, CONFIRMATION_DELAY);
 
-  }
+}
+
+function bpmToZone(bpm) {
+
+    if (bpm < 105)
+        return "chill";
+
+    if (bpm < 130)
+        return "normal";
+
+    return "endurance";
+
+}
+
+function handleHeartRate(event) {
+
+    const value =
+        event.target.value;
+
+    const bpm =
+        value.getUint8(1);
+
+    bpmDisplay.textContent =
+        bpm;
+
+    const zone =
+        bpmToZone(bpm);
+
+    zoneDisplay.textContent =
+        zone.toUpperCase();
+
+    requestZoneChange(zone);
+
+}
+
+document
+.getElementById("connect")
+.addEventListener(
+    "click",
+    async () => {
+
+        try {
+
+            const device =
+                await navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: [
+                            "heart_rate"
+                        ]
+                    }]
+                });
+
+            const server =
+                await device.gatt.connect();
+
+            const service =
+                await server.getPrimaryService(
+                    "heart_rate"
+                );
+
+            const characteristic =
+                await service.getCharacteristic(
+                    "heart_rate_measurement"
+                );
+
+            await characteristic
+                .startNotifications();
+
+            characteristic
+                .addEventListener(
+                    "characteristicvaluechanged",
+                    handleHeartRate
+                );
+
+            alert(
+                "Polar H10 connecté"
+            );
+
+        } catch(error) {
+
+            console.error(error);
+
+            alert(
+                "Connexion impossible"
+            );
+
+        }
 
     }
+);
+
+document
+.getElementById("testChill")
+.addEventListener(
+    "click",
+    () => {
+
+        currentZone = "chill";
+
+        playZone("chill");
+
+        zoneDisplay.textContent =
+            "CHILL";
+
+    }
+);
+
+document
+.getElementById("testNormal")
+.addEventListener(
+    "click",
+    () => {
+
+        currentZone = "normal";
+
+        playZone("normal");
+
+        zoneDisplay.textContent =
+            "NORMAL";
+
+    }
+);
+
+document
+.getElementById("testEndurance")
+.addEventListener(
+    "click",
+    () => {
+
+        currentZone = "endurance";
+
+        playZone("endurance");
+
+        zoneDisplay.textContent =
+            "ENDURANCE";
+
+    }
+);
+
+document
+.getElementById("nextTrack")
+.addEventListener(
+    "click",
+    () => {
+
+        if (!currentZone)
+            return;
+
+        playZone(currentZone);
+
+    }
+);

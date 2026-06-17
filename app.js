@@ -159,10 +159,10 @@ function requestZoneChange(zone) {
 
 function bpmToZone(bpm) {
 
-    if (bpm < 105)
+    if (bpm < 90)
         return "chill";
 
-    if (bpm < 130)
+    if (bpm < 110)
         return "normal";
 
     return "endurance";

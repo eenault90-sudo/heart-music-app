@@ -1,46 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Heart Music Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heart Music Tactical</title>
 <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<h1>Heart Music Pro</h1>
+<div class="container">
 
-<button id="connect">Connect Polar H10</button>
+<h1>HEART MUSIC TACTICAL</h1>
 
-<h2>BPM : <span id="bpm">--</span></h2>
+<button id="connect">CONNECTER POLAR H10</button>
 
-<h2>Zone : <span id="zone">--</span></h2>
+<div class="card">
+    <div class="label">BPM</div>
+    <div id="bpm" class="bpm">--</div>
+</div>
 
-<h3>Morceau en cours :</h3>
-<p id="currentTrack">Aucun</p>
+<div class="card">
+    <div class="label">ZONE</div>
+    <div id="zone" class="zone">--</div>
+</div>
 
-<hr>
+<div class="card">
+    <div class="label">MORCEAU EN COURS</div>
+    <div id="currentTrack">Aucun</div>
+</div>
 
-<h3>Ajouter des musiques</h3>
+<div class="buttons">
+    <button id="testChill">TEST CHILL</button>
+    <button id="testNormal">TEST NORMAL</button>
+    <button id="testEndurance">TEST ENDURANCE</button>
+</div>
 
-<p>Playlist Chill</p>
-<input type="file" id="addChill" multiple accept=".mp3">
+<div class="buttons">
+    <button id="nextTrack">MORCEAU SUIVANT</button>
+</div>
 
-<p>Playlist Normal</p>
-<input type="file" id="addNormal" multiple accept=".mp3">
+<audio id="audio"></audio>
 
-<p>Playlist Endurance</p>
-<input type="file" id="addEndurance" multiple accept=".mp3">
-
-<hr>
-
-<p>Chill : <span id="chillCount">0</span> morceau(x)</p>
-<p>Normal : <span id="normalCount">0</span> morceau(x)</p>
-<p>Endurance : <span id="enduranceCount">0</span> morceau(x)</p>
-
-<audio id="audio" controls></audio>
+</div>
 
 <script src="app.js"></script>
-
 </body>
 </html>

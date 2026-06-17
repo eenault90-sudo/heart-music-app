@@ -1,16 +1,16 @@
 {
   "chill": [
-    "chill/relax1.mp3",
-    "chill/relax2.mp3"
+    "chill/chill1.mp3",
+    "chill/chill2.mp3"
   ],
 
   "normal": [
-    "normal/marche1.mp3",
-    "normal/marche2.mp3"
+    "normal/normal1.mp3",
+    "normal/normal2.mp3"
   ],
 
   "endurance": [
-    "endurance/run1.mp3",
-    "endurance/run2.mp3"
+    "endurance/endurance1.mp3",
+    "endurance/endurance2.mp3"
   ]
 }
